@@ -28,4 +28,4 @@ Contribuições são o que tornam a comunidade de código aberto um lugar incrí
 ## Contato
 Waldir Donatti Junior - waldirjr94@gmail.com
 
-Link do Projeto: https://github.com/waldirjr94/cloner
+Link do Projeto: https://github.com/waldirjr94/Cloner
