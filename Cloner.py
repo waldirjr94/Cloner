@@ -8,23 +8,22 @@ import json
 import threading
 import time
 
-# Caminho para o arquivo de configuração
-CONFIG_FILE = 'cloner_config.json'
-
 # Cores e Estilos
-COR_PRIMARIA = '#333333'  # Cor escura para texto
-COR_SECUNDARIA = '#ffffff'  # Cor clara para fundo
-COR_DESTAQUE = '#4CAF50'  # Cor de destaque
+COR_PRIMARIA = '#333333'
+COR_SECUNDARIA = '#ffffff'
+COR_DESTAQUE = '#4CAF50'
 FONTE_PADRAO = ('Arial', 10)
 FONTE_DESTAQUE = ('Arial', 10, 'bold')
 
+CONFIG_FILE = 'cloner_config.json'
+
 class Watcher:
-    def __init__(self, source_folder, destination_folder, status_label):
+    def __init__(self, source_folder, destination_folder, status_label, mode):
         self.observer = Observer()
         self.source_folder = source_folder
         self.destination_folder = destination_folder
         self.status_label = status_label
-        self.event_handler = Handler(self.source_folder, self.destination_folder)
+        self.event_handler = Handler(self.source_folder, self.destination_folder, mode)
 
     def run(self):
         self.observer.schedule(self.event_handler, self.source_folder, recursive=True)
@@ -47,9 +46,10 @@ class Watcher:
             start_button.grid(row=2, column=0, padx=5, pady=5, sticky='ew')
 
 class Handler(FileSystemEventHandler):
-    def __init__(self, source_folder, destination_folder):
+    def __init__(self, source_folder, destination_folder, mode):
         self.source_folder = source_folder
         self.destination_folder = destination_folder
+        self.mode = mode
 
     def on_any_event(self, event):
         if event.is_directory:
@@ -60,12 +60,11 @@ class Handler(FileSystemEventHandler):
 
         if event.event_type in ['created', 'modified']:
             self.try_copy(source_path, dest_path)
-        elif event.event_type == 'deleted':
+        elif event.event_type == 'deleted' and self.mode == 'Espelhar Tudo':
             if os.path.exists(dest_path):
                 os.remove(dest_path)
 
     def try_copy(self, source, destination, attempts=5, delay=1):
-        """Tenta copiar um arquivo, com um número definido de tentativas e atraso entre elas."""
         for _ in range(attempts):
             try:
                 shutil.copy2(source, destination)
@@ -73,14 +72,12 @@ class Handler(FileSystemEventHandler):
             except PermissionError:
                 time.sleep(delay)
 
-watcher = None
-
 def start_watcher():
     global watcher
     source_path = source_entry.get()
     destination_path = destination_entry.get()
     save_config(source_path, destination_path)
-    watcher = Watcher(source_path, destination_path, status_label)
+    watcher = Watcher(source_path, destination_path, status_label, user_mode)
     threading.Thread(target=watcher.run).start()
 
 def stop_watcher():
@@ -111,9 +108,15 @@ def load_config():
     except (FileNotFoundError, json.JSONDecodeError):
         return None, None
 
+def ask_user_mode():
+    response = messagebox.askyesno("Selecionar Modo", "Deseja espelhar tudo? (Não para apenas manter backup)")
+    return "Espelhar Tudo" if response else "Manter Backup"
+
 app = tk.Tk()
 app.title("Cloner")
 app.configure(bg=COR_SECUNDARIA)
+
+user_mode = ask_user_mode()
 
 frame = tk.Frame(app, bg=COR_SECUNDARIA)
 frame.pack(padx=10, pady=10, fill='both', expand=True)
